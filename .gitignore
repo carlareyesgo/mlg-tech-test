@@ -1,0 +1,17 @@
+cat >> .gitignore <<'EOF'
+# macOS
+.DS_Store
+
+# VS Code
+.vscode/*
+!.vscode/settings.json
+!.vscode/tasks.json
+!.vscode/launch.json
+!.vscode/extensions.json
+
+# .NET build
+bin/
+obj/
+**/bin/
+**/obj/
+EOF

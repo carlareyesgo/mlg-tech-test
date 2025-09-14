@@ -15,3 +15,15 @@ obj/
 **/bin/
 **/obj/
 EOF
+.DS_Store
+**/bin/
+**/obj/
+mobile/node_modules/
+mobile/.expo/
+mobile/.expo-shared/
+mobile/dist/
+mobile/build/
+mobile/android/
+mobile/ios/
+*.env
+mobile/.env

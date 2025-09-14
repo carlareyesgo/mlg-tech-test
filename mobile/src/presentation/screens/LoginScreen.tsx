@@ -1,21 +1,22 @@
 import React from "react";
 import { View, Text, TextInput, Button, Alert } from "react-native";
 import { NativeStackScreenProps } from "@react-navigation/native-stack";
-import { RootStackParamList } from "../navigation/AppNavigator";
+import { RootStackParamList } from "../../navigation/AppNavigator";
 import { Formik } from "formik";
 import * as Yup from "yup";
-import { login } from "../api/auth";
-import { useAuth } from "../store/auth";
+import { useLogin } from "../../auth/hooks";
+import { friendlyError } from "../../utils/errors";
 
 type Props = NativeStackScreenProps<RootStackParamList, "Login">;
 
 const schema = Yup.object({
   email: Yup.string().email("Email inválido").required("Requerido"),
-  password: Yup.string().min(6).required("Requerido"),
+  password: Yup.string().min(6, "Mínimo 6 caracteres").required("Requerido"),
 });
 
 export default function LoginScreen({ navigation }: Props) {
-  const setAuth = useAuth((s) => s.setAuth);
+  const login = useLogin();
+  const [formError, setFormError] = React.useState<string | null>(null);
 
   return (
     <View style={{ padding: 16, gap: 12 }}>
@@ -25,14 +26,12 @@ export default function LoginScreen({ navigation }: Props) {
         initialValues={{ email: "", password: "" }}
         validationSchema={schema}
         onSubmit={async (values, { setSubmitting }) => {
+          setFormError(null);
+          login.reset();
           try {
-            const { user, tokens } = await login(values.email, values.password);
-            setAuth(user, tokens.accessToken, tokens.refreshToken);
-          } catch (e: any) {
-            Alert.alert(
-              "Error",
-              e?.response?.data?.message ?? "No se pudo iniciar sesión"
-            );
+            await login.mutateAsync(values);
+          } catch (e) {
+            Alert.alert("Error", friendlyError(e, "login"));
           } finally {
             setSubmitting(false);
           }
@@ -50,7 +49,10 @@ export default function LoginScreen({ navigation }: Props) {
             <Text>Email</Text>
             <TextInput
               value={values.email}
-              onChangeText={handleChange("email")}
+              onChangeText={(t) => {
+                setFormError(null);
+                handleChange("email")(t);
+              }}
               autoCapitalize="none"
               keyboardType="email-address"
               style={{ borderWidth: 1, padding: 8, borderRadius: 8 }}
@@ -62,7 +64,10 @@ export default function LoginScreen({ navigation }: Props) {
             <Text>Contraseña</Text>
             <TextInput
               value={values.password}
-              onChangeText={handleChange("password")}
+              onChangeText={(t) => {
+                setFormError(null);
+                handleChange("password")(t);
+              }}
               secureTextEntry
               style={{ borderWidth: 1, padding: 8, borderRadius: 8 }}
             />
@@ -71,13 +76,21 @@ export default function LoginScreen({ navigation }: Props) {
             ) : null}
 
             <Button
-              title={isSubmitting ? "Ingresando…" : "Ingresar"}
+              title={
+                isSubmitting || login.isPending ? "Ingresando…" : "Ingresar"
+              }
               onPress={() => handleSubmit()}
+              disabled={isSubmitting || login.isPending}
             />
+
             <Button
               title="Crear cuenta"
               onPress={() => navigation.navigate("Register")}
             />
+
+            {formError ? (
+              <Text style={{ color: "red" }}>{formError}</Text>
+            ) : null}
           </View>
         )}
       </Formik>

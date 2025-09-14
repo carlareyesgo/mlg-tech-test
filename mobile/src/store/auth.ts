@@ -1,12 +1,12 @@
 import { create } from 'zustand';
 import { persist, createJSONStorage, StateStorage } from 'zustand/middleware';
 import * as SecureStore from 'expo-secure-store';
-import type { User } from '../api/auth';
+import type { User } from '../domain/models';   
 
 const secureStorage: StateStorage = {
   getItem: async (name) => {
     const v = await SecureStore.getItemAsync(name);
-    return v ?? null
+    return v ?? null; 
   },
   setItem: (name, value) => SecureStore.setItemAsync(name, value),
   removeItem: (name) => SecureStore.deleteItemAsync(name),
@@ -33,6 +33,7 @@ export const useAuth = create<AuthState>()(
     {
       name: 'auth',
       storage: createJSONStorage(() => secureStorage),
+
       partialize: (state) => ({
         user: state.user,
         accessToken: state.accessToken,
@@ -42,7 +43,6 @@ export const useAuth = create<AuthState>()(
   )
 );
 
-// Helpers para usar desde axios u otros módulos sin hooks
 export const getTokens = () => {
   const s = useAuth.getState();
   return { accessToken: s.accessToken, refreshToken: s.refreshToken };

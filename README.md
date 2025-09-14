@@ -3,19 +3,19 @@
 Backend de autenticación para la prueba técnica: **register / login / me / refresh** con **JWT (HS256)**, **BCrypt**, **Swagger**, **CORS**, y **almacenamiento in-memory** (usuarios + refresh tokens). Arquitectura basada en capas tipo Clean.
 
 ## Requisitos
-- .NET SDK 8.x (`dotnet --info`)
-- macOS/Windows/Linux
-- (Opcional) `openssl` para generar claves y `curl`/`jq` para probar
+- Node 18+ / npm
+- Expo CLI (se instala al volar)
+- iOS Simulator (Xcode) y/o Android SDK (opcional)
+- Backend corriendo en `http://localhost:5296` (o el host/puerto que corresponda)
 
-## Estructura
+## Variables de entorno
 
-backend/
-src/
-MLG.Auth.sln
-MLG.Auth.Api/ # Minimal API + Swagger + JwtBearer
-MLG.Auth.Domain/ # Entidades/contratos (User, IUserRepository)
-MLG.Auth.Application/ # (reservado para casos de uso)
-MLG.Auth.Infrastructure/ # Repo in-memory + JwtTokenService + InMemoryRefreshStore
+Crea un archivo `.env` en `mobile/` (no se versiona) a partir de `.env.example`:
+
+```env
+EXPO_PUBLIC_API_URL_IOS=http://localhost:5296
+EXPO_PUBLIC_API_URL_ANDROID=http://10.0.2.2:5296
+```
 
 
 ## Configuración de JWT
@@ -66,29 +66,37 @@ curl -i -X POST http://localhost:5296/api/auth/refresh \
   -H "Content-Type: application/json" \
   -d "{\"refreshToken\":\"$REFRESH\"}"
 
-## Detalles técnicos
+## Resumen por capas
 
-NET 8 con Minimal APIs.
+domain: contratos y modelos (agnóstico a librerías).
 
-JwtBearer configurado con:
+data: repos concretos que hablan con la API.
 
-MapInboundClaims = false (evita renombrado automático de claims).
+infrastructure: adapters de librerías y composición (axios, secure storage, interceptores, event bus).
 
-Validación de lifetime/clave y ClockSkew = 0.
-
-Claims emitidas: sub, email, typ = access/refresh.
-
-/me busca sub/email y soporta también ClaimTypes.NameIdentifier/Email.
-
-BCrypt para hash de contraseñas.
-
-InMemoryUserRepository (usuarios) y InMemoryRefreshStore (refresh tokens).
-
-Swagger con esquema Bearer para pruebas.
-
-CORS abierto en DEV (ajustar para PROD).
+presentation: pantallas, navegación y hooks de UI
 
 
 
+## Patrones de diseño usados
 
+1.- Repository (domain/AuthRepository.ts, data/ApiAuthRepository.ts)
+
+Desacopla la UI de la fuente de datos. La pantalla no sabe si los datos vienen de REST, cache o mock; depende del contrato.
+
+2.- Adapter
+
+infrastructure/SecureStoreAdapter.ts: encapsula expo-secure-store con una interfaz mínima (ISecureStorage).
+
+infrastructure/AxiosClient.ts: centraliza la creación de axios y la elección de baseURL por plataforma (iOS vs Android), evitando hardcodes en UI.
+
+3.- Factory / Dependency Injection (DI) (infrastructure/container.ts)
+
+Crea e inyecta instancias (axios, repos, bus de eventos) en un solo punto.
+
+Añade interceptores (Authorization + refresh on 401) sin tocar la UI.
+
+4.- Observer (Event Bus) (container.ts con mitt)
+
+Emite eventos globales (auth:logout, auth:tokenRefreshed) que escucha el AuthProvider. Esto permite reaccionar a expiración de token y logout desde cualquier capa.
 

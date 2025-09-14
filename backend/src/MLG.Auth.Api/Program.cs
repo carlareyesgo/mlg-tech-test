@@ -40,7 +40,7 @@ builder.Services.AddSwaggerGen(c =>
 });
 
 
-// CORS (abierto para dev)
+// CORS 
 builder.Services.AddCors(o => o.AddDefaultPolicy(p =>
     p.AllowAnyOrigin().AllowAnyHeader().AllowAnyMethod()));
 
@@ -69,7 +69,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ClockSkew = TimeSpan.Zero
         };
 
-        // (opcional) logs de diagnóstico
+
         o.Events = new JwtBearerEvents
         {
             OnAuthenticationFailed = ctx =>
@@ -110,7 +110,10 @@ app.MapPost("/api/auth/register", async (
 {
     var existing = await repo.GetByEmailAsync(dto.Email);
     if (existing != null)
-        return Results.BadRequest(new { message = "Email already registered" });
+        return Results.Json(
+       new { message = "Ese correo ya está registrado. Inicia sesión." },
+       statusCode: StatusCodes.Status409Conflict
+   );
 
     var user = new User
     {
